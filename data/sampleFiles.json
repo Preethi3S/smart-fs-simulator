@@ -1,0 +1,40 @@
+{
+  "name": "root",
+  "type": "FOLDER",
+  "children": [
+    {
+      "name": "projects",
+      "type": "FOLDER",
+      "children": [
+        {
+          "name": "java",
+          "type": "FOLDER",
+          "children": [
+            { "name": "Main.java", "type": "FILE", "size": 15 },
+            { "name": "Utils.java", "type": "FILE", "size": 10 }
+          ]
+        },
+        {
+          "name": "python",
+          "type": "FOLDER",
+          "children": [
+            { "name": "app.py", "type": "FILE", "size": 12 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "notes.txt",
+      "type": "FILE",
+      "size": 5
+    },
+    {
+      "name": "images",
+      "type": "FOLDER",
+      "children": [
+        { "name": "logo.png", "type": "FILE", "size": 8 },
+        { "name": "icon.png", "type": "FILE", "size": 8 }
+      ]
+    }
+  ]
+}
