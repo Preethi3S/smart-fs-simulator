@@ -3,7 +3,15 @@ package core;
 import java.util.*;
 
 public class FileIndexer {
-    private TrieNode root = new TrieNode();
+    private TrieNode root;
+
+    public FileIndexer() { // Add public constructor
+        this.root = new TrieNode();
+    }
+    
+    public void clear() { // New: Method to clear the index
+        this.root = new TrieNode();
+    }
 
     public void insert(String name) {
         TrieNode node = root;

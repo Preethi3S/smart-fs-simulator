@@ -22,4 +22,19 @@ public class FileNode {
     public Map<String, FileNode> getChildren() { return children; }
     public FileMeta getMeta() { return meta; }
     public void setMeta(FileMeta meta) { this.meta = meta; }
+    
+    // New Method to get the full path
+    public String getFullPath() {
+        // The root node's name is "root" and its parent is null
+        if (parent == null || name.equals("root")) {
+            return name.equals("root") ? "/" : name; // Return "/" for the actual root path
+        }
+        
+        // Recursively build the path up to the root
+        String parentPath = parent.getFullPath();
+        if (parentPath.equals("/")) {
+            return parentPath + name;
+        }
+        return parentPath + "/" + name;
+    }
 }
