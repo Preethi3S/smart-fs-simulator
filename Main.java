@@ -1,4 +1,3 @@
-// Main.java
 
 import core.FileSystem;
 import history.AccessHistory;
@@ -23,14 +22,19 @@ public class Main {
                 continue;
             }
             
-            // Refined handling for clearing history
+            if(input.equalsIgnoreCase("clear history") || input.equalsIgnoreCase("clear")) {
+                accessHistory.clearHistory();
+                fileSystem.clearCache(); 
+                System.out.println("✅ Access history and MRU cache cleared.");
+                continue;
+            }
+            
             if(input.equalsIgnoreCase("clear history") || input.equalsIgnoreCase("clear")) {
                 accessHistory.clearHistory();
                 System.out.println("✅ Access history cleared.");
                 continue;
             }
 
-            // Log access to AccessHistory for navigation & file actions
             if (input.startsWith("cd") || input.startsWith("open") || input.startsWith("touch") || input.startsWith("mkdir")) {
                 accessHistory.visit(input);
             }

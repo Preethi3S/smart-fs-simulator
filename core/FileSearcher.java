@@ -18,7 +18,6 @@ public class FileSearcher {
         }
     }
     
-    // New Global Search Method
     public static List<SearchResult> searchByName(FileNode root, String name) {
         List<SearchResult> results = new ArrayList<>();
         findRecursive(root, name.toLowerCase(), results);
@@ -26,13 +25,10 @@ public class FileSearcher {
     }
 
     private static void findRecursive(FileNode node, String nameToFind, List<SearchResult> results) {
-        // Check if the current node's name contains the search string (case-insensitive)
-        // We skip "root" itself as a matching result
         if (node.getName().toLowerCase().contains(nameToFind) && !node.getName().equals("root")) {
             results.add(new SearchResult(node.getName(), node.getFullPath()));
         }
 
-        // Recursively search children
         for (FileNode child : node.getChildren().values()) {
             findRecursive(child, nameToFind, results);
         }

@@ -1,8 +1,9 @@
 package model;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public class FileMeta {
+public class FileMeta implements Serializable{
     private int size;
     private LocalDateTime createdAt;
 
@@ -13,4 +14,6 @@ public class FileMeta {
 
     public int getSize() { return size; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    
+    public void setSize(int size) { this.size = size; } 
 }

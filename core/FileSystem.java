@@ -1,28 +1,33 @@
 package core;
+import java.io.*;
 
 import model.*;
 import history.NavigationStack;
+import history.RecentAccessCache;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class FileSystem {
+    private static final String SNAPSHOT_FILE = "smartfs_snapshot.ser";
+    private static List<String> INDEX_CACHE = new ArrayList<>();
     private FileNode root;
     private FileNode current;
     private NavigationStack navStack;
-    private FileIndexer indexer; // 1. Add FileIndexer
+    private FileIndexer indexer; 
+    private RecentAccessCache accessCache;
 
     public FileSystem() {
         root = new FileNode("root", FileType.FOLDER, null);
         current = root;
         navStack = new NavigationStack();
-        indexer = new FileIndexer(); // Initialize the indexer
-        buildIndex(); // Build the initial index
+        indexer = new FileIndexer(); 
+        buildIndex(); 
+        accessCache = new RecentAccessCache();
     }
     
-    // --- New Indexing/Utility Methods ---
-    
-    /** Recursively inserts all file/folder names into the indexer. */
     private void buildIndex() {
-        indexer.clear(); // Clear before rebuilding
+        indexer.clear(); 
         indexNode(root);
     }
     
@@ -32,6 +37,12 @@ public class FileSystem {
             indexNode(child);
         }
     }
+
+    public void clearCache() {
+    if (accessCache != null) {
+        accessCache.clear();
+    }
+}
     
     private void handleAutocomplete(String[] parts) {
         if (parts.length < 2) {
@@ -50,8 +61,6 @@ public class FileSystem {
             }
         }
     }
-    
-    // --- Modified File Command Methods to Update Index ---
 
     private void makeDirectory(String[] parts) {
         if (parts.length < 2) return;
@@ -61,7 +70,7 @@ public class FileSystem {
         return;
     }
         current.getChildren().put(folder, new FileNode(folder, FileType.FOLDER, current));
-        indexer.insert(folder); // Index the new folder name
+        indexer.insert(folder); 
     }
 
     private void createFile(String[] parts) {
@@ -74,10 +83,8 @@ public class FileSystem {
         FileNode f = new FileNode(file, FileType.FILE, current);
         f.setMeta(new FileMeta(file.length() * 10));
         current.getChildren().put(file, f);
-        indexer.insert(file); // Index the new file name
+        indexer.insert(file); 
     }
-    
-    // --- Modified handleCommand ---
 
     public void handleCommand(String command) {
         String[] parts = command.trim().split("\\s+");
@@ -92,13 +99,227 @@ public class FileSystem {
             case "open" -> openFile(parts);
             case "history" -> navStack.printHistory();
             case "back" -> back();
+            case "rm" -> removeFileOrFolder(parts);
             case "stat" -> showStats(parts);
-            case "ac" -> handleAutocomplete(parts); // Assuming previous step completed
-            case "find" -> findFileOrFolder(parts); // New command
+            case "ac" -> handleAutocomplete(parts); 
+            case "find" -> findFileOrFolder(parts); 
+            case "index-export" -> exportIndex();
+            case "index-import" -> importIndex();
+            case "mv" -> moveItem(parts);
+            case "mru" -> accessCache.printMRU();
+            case "write" -> writeToFile(command); 
+            case "read" -> readFromFile(parts);
+            case "cp" -> copyItem(parts);
+            case "snapshot" -> saveSnapshot(); 
+            case "restore" -> restoreSnapshot();
             default -> System.out.println("Invalid command");
         }
     }
 
+    private void saveSnapshot() {
+        try (FileOutputStream fos = new FileOutputStream(SNAPSHOT_FILE);
+             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+            
+            oos.writeObject(root); 
+            System.out.println("📸 Snapshot saved successfully to " + SNAPSHOT_FILE);
+        } catch (IOException e) {
+            System.out.println("❌ Error saving snapshot: " + e.getMessage());
+        }
+    }
+
+
+    private void restoreSnapshot() {
+        File snapshot = new File(SNAPSHOT_FILE);
+        if (!snapshot.exists()) {
+            System.out.println("❌ No snapshot file found to restore.");
+            return;
+        }
+        
+        try (FileInputStream fis = new FileInputStream(SNAPSHOT_FILE);
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            
+            root = (FileNode) ois.readObject(); 
+            current = root; 
+            buildIndex(); 
+            System.out.println("💿 File system restored successfully from snapshot.");
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("❌ Error restoring snapshot: " + e.getMessage());
+        }
+    }
+
+    private void copyItem(String[] parts) {
+        if (parts.length < 3) {
+            System.out.println("Usage: cp <source_item_name> <destination_folder_name>");
+            return;
+        }
+        
+        String sourceName = parts[1];
+        String destName = parts[2];
+
+        FileNode sourceNode = current.getChildren().get(sourceName);
+        FileNode destNode = current.getChildren().get(destName);
+
+        if (sourceNode == null) {
+            System.out.println("❌ Source item not found: " + sourceName);
+            return;
+        }
+        if (destNode == null || destNode.getType() != FileType.FOLDER) {
+            System.out.println("❌ Destination must be an existing folder: " + destName);
+            return;
+        }
+        
+        if (destNode.getChildren().containsKey(sourceName)) {
+            System.out.println("❌ Cannot copy. Item with name '" + sourceName + "' already exists in destination.");
+            return;
+        }
+        
+        FileNode copiedNode = sourceNode.deepClone(destNode);
+        
+        destNode.getChildren().put(copiedNode.getName(), copiedNode);
+        buildIndex(); 
+        
+        System.out.println("✅ Copied '" + sourceName + "' to '" + destName + "'.");
+    }
+
+    private void writeToFile(String command) {
+        String[] parts = command.trim().split("\\s+", 3);
+        
+        if (parts.length < 3) {
+            System.out.println("Usage: write <filename> \"<content>\"");
+            return;
+        }
+
+        String fileName = parts[1];
+        String content = parts[2];
+
+        if (content.startsWith("\"") && content.endsWith("\"")) {
+            content = content.substring(1, content.length() - 1);
+        } else {
+             System.out.println("❌ Content must be enclosed in double quotes.");
+             return;
+        }
+
+        FileNode fileNode = current.getChildren().get(fileName);
+
+        if (fileNode == null || fileNode.getType() != FileType.FILE) {
+            System.out.println("❌ File not found or is a folder: " + fileName);
+            return;
+        }
+
+        fileNode.setContent(content);
+   
+        accessCache.recordAccess(fileNode.getFullPath(), "write " + fileName); 
+        
+        System.out.println("📝 Wrote " + content.length() + " characters to " + fileName);
+    }
+
+
+    private void readFromFile(String[] parts) {
+        if (parts.length < 2) {
+            System.out.println("Usage: read <filename>");
+            return;
+        }
+        
+        String fileName = parts[1];
+        FileNode fileNode = current.getChildren().get(fileName);
+
+        if (fileNode == null || fileNode.getType() != FileType.FILE) {
+            System.out.println("❌ File not found or is a folder: " + fileName);
+            return;
+        }
+
+        String content = fileNode.getContent();
+        
+        System.out.println("--- Content of " + fileName + " ---");
+        System.out.println(content);
+        System.out.println("--------------------------------");
+        
+        accessCache.recordAccess(fileNode.getFullPath(), "read " + fileName); 
+    }
+
+    
+    
+    private void moveItem(String[] parts) {
+        if (parts.length < 3) {
+            System.out.println("Usage: mv <source_item_name> <destination_folder_name>");
+            return;
+        }
+        
+        String sourceName = parts[1];
+        String destName = parts[2];
+
+        FileNode sourceNode = current.getChildren().get(sourceName);
+        if (sourceNode == null) {
+            System.out.println("❌ Source item not found: " + sourceName);
+            return;
+        }
+
+     
+        FileNode destNode = current.getChildren().get(destName);
+        if (destNode == null) {
+            System.out.println("❌ Destination folder not found: " + destName);
+            return;
+        }
+        if (destNode.getType() != FileType.FOLDER) {
+            System.out.println("❌ Destination must be a folder.");
+            return;
+        }
+        
+        if (destNode.getChildren().containsKey(sourceName)) {
+            System.out.println("❌ Cannot move. Item with name '" + sourceName + "' already exists in destination.");
+            return;
+        }
+        
+   
+        current.getChildren().remove(sourceName);
+       
+        sourceNode.setParent(destNode);
+ 
+        destNode.getChildren().put(sourceName, sourceNode);
+        
+        System.out.println("✅ Moved '" + sourceName + "' to '" + destName + "'.");
+    }
+    
+    private void exportIndex() {
+        INDEX_CACHE = indexer.getAllIndexedWords();
+        System.out.println("💾 File index exported successfully. Total words: " + INDEX_CACHE.size());
+    }
+
+    private void importIndex() {
+        if (INDEX_CACHE.isEmpty()) {
+            System.out.println("❌ Index cache is empty. Nothing to import.");
+            return;
+        }
+        indexer.importWords(INDEX_CACHE);
+        System.out.println("💿 File index imported successfully. Total words: " + INDEX_CACHE.size());
+    }
+
+    private void removeFileOrFolder(String[] parts) {
+        if (parts.length < 2) {
+            System.out.println("Usage: rm <file_or_folder>");
+            return;
+        }
+        String name = parts[1];
+        FileNode nodeToRemove = current.getChildren().get(name);
+
+        if (nodeToRemove == null) {
+            System.out.println("Item not found: " + name);
+            return;
+        }
+
+        if (nodeToRemove.getType() == FileType.FOLDER) {
+            if (!nodeToRemove.getChildren().isEmpty()) {
+                System.out.println("❌ Folder is not empty. Cannot delete non-empty folders.");
+                return;
+            }
+        }
+        
+        current.getChildren().remove(name);
+        
+        buildIndex(); 
+        
+        System.out.println("✅ Removed: " + name);
+    }
     private void showStats(String[] parts) {
         if (parts.length < 2) {
             System.out.println("Usage: stat <file_or_folder>");
@@ -114,9 +335,7 @@ public class FileSystem {
 
         System.out.println("📊 Stats for: " + node.getName());
         System.out.println("- Type: " + node.getType());
-        System.out.println("- Path: " + node.getFullPath()); // Use the new getFullPath()
-
-        // Only show meta for files
+        System.out.println("- Path: " + node.getFullPath());
         if (node.getType() == FileType.FILE && node.getMeta() != null) {
             System.out.println("- Size: " + node.getMeta().getSize() + " bytes");
             System.out.println("- Created At: " + node.getMeta().getCreatedAt());
@@ -125,7 +344,6 @@ public class FileSystem {
         }
     }
 
-    // New method for handling the 'find' command
     private void findFileOrFolder(String[] parts) {
         if (parts.length < 2) {
             System.out.println("Usage: find <name>");
@@ -133,7 +351,6 @@ public class FileSystem {
         }
         String name = parts[1];
         
-        // Use the new search utility, starting from the global root
         List<SearchResult> results = FileSearcher.searchByName(root, name);
 
         if (results.isEmpty()) {
