@@ -1,7 +1,8 @@
 
+import java.util.Scanner;
+
 import core.FileSystem;
 import history.AccessHistory;
-import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
@@ -9,12 +10,15 @@ public class Main {
         AccessHistory accessHistory = new AccessHistory();
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("🧠 Smart File Simulator with History Support");
-        System.out.println("Type 'exit' to quit, 'access' to see visited items\n");
+        System.out.println("Smart File Simulator with History Support");
+        System.out.println("Type 'help' for commands, 'exit' to quit, 'access' to see visited items\n");
 
         while (true) {
             System.out.print("$ ");
+            if (!scanner.hasNextLine()) break;
             String input = scanner.nextLine().trim();
+
+            if (input.isEmpty()) continue;
 
             if (input.equalsIgnoreCase("exit")) break;
             if (input.equalsIgnoreCase("access")) {
@@ -25,13 +29,13 @@ public class Main {
             if(input.equalsIgnoreCase("clear history") || input.equalsIgnoreCase("clear")) {
                 accessHistory.clearHistory();
                 fileSystem.clearCache(); 
-                System.out.println("✅ Access history and MRU cache cleared.");
+                System.out.println("Access history and MRU cache cleared.");
                 continue;
             }
             
             if(input.equalsIgnoreCase("clear history") || input.equalsIgnoreCase("clear")) {
                 accessHistory.clearHistory();
-                System.out.println("✅ Access history cleared.");
+                System.out.println("Access history cleared.");
                 continue;
             }
 
@@ -43,7 +47,7 @@ public class Main {
              fileSystem.handleCommand(input);
         }
 
-        System.out.println("👋 Simulator ended. Goodbye!");
+        System.out.println("Simulator ended. Goodbye!");
         scanner.close();
     }
 }

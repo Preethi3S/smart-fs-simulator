@@ -1,41 +1,40 @@
 package core;
 
-import model.*;
-
 import java.io.Serializable;
-import java.util.*;
+import java.util.Map;
 
-public class FileNode implements Serializable{
+import model.FileMeta;
+import model.FileType;
+import model.Inode;
+
+public class FileNode implements Serializable {
     private String name;
-    private FileType type;
-    private FileMeta meta;
     private FileNode parent;
-    private Map<String, FileNode> children = new HashMap<>();
-    private String content; 
+    private Inode inode;
 
-    public FileNode(String name, FileType type, FileNode parent) {
+    public FileNode(String name, FileNode parent, Inode inode) {
         this.name = name;
-        this.type = type;
         this.parent = parent;
-        this.content = ""; 
+        this.inode = inode;
     }
 
     public String getName() { return name; }
-    public FileType getType() { return type; }
     public FileNode getParent() { return parent; }
-    public Map<String, FileNode> getChildren() { return children; }
-    public FileMeta getMeta() { return meta; }
-    public void setMeta(FileMeta meta) { this.meta = meta; }
     public void setParent(FileNode newParent) { this.parent = newParent; }
     
-    public String getContent() { return content; }
-    public void setContent(String content) { 
-        this.content = content; 
-        
-        if (this.meta != null) {
-            this.meta.setSize(this.content.length() + this.name.length() * 10); 
-        }
-    }
+    public Inode getInode() { return inode; }
+
+    // Delegated methods for convenience
+    public FileType getType() { return inode.getType(); }
+    public Map<String, FileNode> getChildren() { return inode.getChildren(); }
+    public String getContent() { return inode.getContent(); }
+    public void setContent(String content) { inode.setContent(content); }
+    public String getPermissions() { return inode.getPermissions(); }
+    public void setPermissions(String p) { inode.setPermissions(p); }
+    public int getSize() { return inode.getSize(); }
+    public String getTargetPath() { return inode.getTargetPath(); }
+    public void setTargetPath(String path) { inode.setTargetPath(path); }
+    public FileMeta getMeta() { return null; } // Deprecated, kept for compatibility if needed, but returning null
     
     public String getFullPath() {
         if (parent == null || name.equals("root")) {
@@ -50,21 +49,18 @@ public class FileNode implements Serializable{
     }
 
     public FileNode deepClone(FileNode newParent) {
-        FileNode copy = new FileNode(this.name, this.type, newParent);
+        // Create new Inode (copy)
+        Inode newInode = new Inode(this.inode.getType());
+        newInode.setPermissions(this.inode.getPermissions());
+        newInode.setContent(this.inode.getContent());
+        newInode.setSize(this.inode.getSize());
         
-        if (this.meta != null) {
-            FileMeta metaCopy = new FileMeta(this.meta.getSize()); 
-            copy.setMeta(metaCopy); 
-        }
+        FileNode copy = new FileNode(this.name, newParent, newInode);
         
-        if (this.type == FileType.FILE && this.content != null) {
-            copy.setContent(this.content); 
-        }
-        
-        if (this.type == FileType.FOLDER) {
-            for (FileNode child : this.children.values()) {
+        if (this.inode.getType() == FileType.FOLDER) {
+            for (FileNode child : this.inode.getChildren().values()) {
                 FileNode childCopy = child.deepClone(copy); 
-                copy.getChildren().put(childCopy.getName(), childCopy);
+                newInode.getChildren().put(childCopy.getName(), childCopy);
             }
         }
         

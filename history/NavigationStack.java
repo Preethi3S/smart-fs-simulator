@@ -15,9 +15,9 @@ public class NavigationStack {
 
     public void printHistory() {
         if (stack.isEmpty()) {
-            System.out.println("📂 No navigation history.");
+            System.out.println("No navigation history.");
         } else {
-            System.out.println("📂 Navigation Stack:");
+            System.out.println("Navigation Stack:");
             for (String s : stack) {
                 System.out.println("- " + s);
             }

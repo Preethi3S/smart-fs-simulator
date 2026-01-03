@@ -16,9 +16,9 @@ public class AccessHistory {
 
     public void printAccessHistory() {
         if (accessList.isEmpty()) {
-            System.out.println("📘 No access history.");
+            System.out.println("No access history.");
         } else {
-            System.out.println("📘 Access History:");
+            System.out.println("Access History:");
             for (String entry : accessList) {
                 System.out.println("- " + entry);
             }

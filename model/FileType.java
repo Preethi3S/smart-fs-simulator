@@ -2,5 +2,6 @@ package model;
 
 public enum FileType {
     FILE,
-    FOLDER
+    FOLDER,
+    SYMLINK
 }

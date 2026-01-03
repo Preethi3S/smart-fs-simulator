@@ -2,8 +2,8 @@
 package history; 
 
 import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.LinkedList; 
+import java.util.LinkedList;
+import java.util.Map; 
 
 public class RecentAccessCache {
     private static final int CACHE_SIZE = 5;
@@ -25,13 +25,13 @@ public class RecentAccessCache {
 
     public void printMRU() {
         if (cache.isEmpty()) {
-            System.out.println("⭐ No recently accessed items.");
+            System.out.println("No recently accessed items.");
             return;
         }
         
         LinkedList<String> keys = new LinkedList<>(cache.keySet());
         
-        System.out.println("⭐ Most Recently Used (Top " + CACHE_SIZE + "):");
+        System.out.println("Most Recently Used (Top " + CACHE_SIZE + "):");
         
         for (int i = keys.size() - 1; i >= 0; i--) {
             String path = keys.get(i);
